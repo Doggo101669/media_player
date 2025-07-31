@@ -289,7 +289,7 @@ fn main() {
             false => d.draw_texture(&unpaused_texture, x_pos, y_pos, Color::WHITE),
         }
         // info
-        d.draw_text(format!("FPS: {}", d.get_fps()).as_str(), 12, 48, 20, color_green);
+        d.draw_text(format!("FPS: {}", d.get_fps()).as_str(), 6, 588, 5, color_green);
         d.draw_text(format!("SONG NAME: {}", songs.get(song_id).unwrap()).as_str(), 12, 28, 5, color_light2);
     }
 
