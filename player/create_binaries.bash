@@ -10,6 +10,7 @@ if [ "$key" = "y" ]; then
     cp ./target/release/player ../bin
     cp ./target/x86_64-pc-windows-gnu/release/player.exe ../bin
     cp ./res ../bin -r
+    zip -r binaries.zip ../bin
 else
     echo "Exiting program..."
     exit
