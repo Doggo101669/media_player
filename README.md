@@ -5,6 +5,8 @@
 ```
 # download the repository
 git clone https://github.com/Doggo101669/media_player --depth 1
+# go in the repo
+cd media_player
 # go to bin
 cd bin
 # run one of the executables
