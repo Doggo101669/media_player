@@ -2,16 +2,12 @@
 # media_player
 
 ## INSTALL
-download the repository<br />
 ```
+# download the repository
 git clone https://github.com/Doggo101669/media_player --depth 1
-```<br />
-go to bin<br />
-```
+# go to bin
 cd bin
-```<br />
-run one of the executables
-```
+# run one of the executables
 # Windows
 .\player.exe
 # Linux
