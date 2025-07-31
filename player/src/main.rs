@@ -1,4 +1,3 @@
-use raylib::ffi::UnloadMusicStream;
 use raylib::prelude::*;
 use simple_logger::*;
 use std::fs;
@@ -6,13 +5,15 @@ use std::path::Path;
 use std::process::exit;
 use rand::prelude::*;
 
-fn display_loading(rl: &mut RaylibHandle, thread: &RaylibThread, progress: i32, max_progress: i32) {
+fn display_loading(rl: &mut RaylibHandle, thread: &RaylibThread, progress: i32, max_progress: i32) { /* This is for when it's loading to display it. */
+    // begin new frame
     let mut d_temp = rl.begin_drawing(thread);
+    // draw to screen Loading... <current stage>/<last stage>
     d_temp.clear_background(Color::RAYWHITE);
     d_temp.draw_text(format!("Loading... {}/{}", progress, max_progress).as_str(), 12, 12, 20, Color::BLACK);
 }
 
-fn color_from_hex(s: &str) -> Color {
+fn color_from_hex(s: &str) -> Color { // chatgpt
     let hex = s.trim_start_matches('#');
     match hex.len() {
         6 => {
@@ -33,8 +34,10 @@ fn color_from_hex(s: &str) -> Color {
 }
 
 fn main() {
+    // Initialize simpleLogger
     SimpleLogger::new().env().init().unwrap();
     log::info!("Initializing RaylibHandle...");
+    // initialize raylib with size(800, 600), log_level(warnings) so I can log myself, title("Media Player")
     let (mut rl, thread) = raylib::init()
         .size(800, 600)
         .log_level(TraceLogLevel::LOG_WARNING)
@@ -43,11 +46,13 @@ fn main() {
 
     rl.set_target_fps(240);
 
+    // for display_loading()
     let (mut progress, max_progress) = (0, 4);
 
     display_loading(&mut rl, &thread, progress, max_progress);
 
     log::info!("Initializing Audio Device...");
+    // initialize the audio device and display the progress
     progress = 1;
     display_loading(&mut rl, &thread, progress, max_progress);
     let mut audio_device = RaylibAudio::init_audio_device().unwrap();
@@ -55,10 +60,13 @@ fn main() {
     log::info!("Loading all songs...");
     progress = 2;
     display_loading(&mut rl, &thread, progress, max_progress);
+    // new list of song paths
     let mut songs: Vec<String> = Vec::new();
 
+    // path is root of git
     let path = Path::new("..");
 
+    // self explanitory
     if let Ok(entries) = fs::read_dir(path) {
         for entry in entries {
             match entry {
@@ -79,6 +87,7 @@ fn main() {
         }
     } else {
         log::error!("Could not open directory");
+        exit(-1);
     }
 
     if songs.len() == 0 {
@@ -92,10 +101,13 @@ fn main() {
 
     let mut song_id: usize = 0;
 
+    // for detecting if song has changed. we set it to anything but song_id to that it thinks it changes and loads the song
     let mut last_song_id: usize = 1;
+    // this is for if the song has started playing yet
     let mut song_played: bool = false;
     let mut rng = rand::thread_rng();
 
+    // colors for theme
     let color_dark0 = color_from_hex("#2e3440");
     let color_dark1 = color_from_hex("#3b4252");
     let color_dark2 = color_from_hex("#434c5e");
@@ -107,6 +119,7 @@ fn main() {
     let color_frost0 = color_from_hex("#8fbcbb");
     let color_frost1 = color_from_hex("#88c0d0");
 
+    // camera for scrolling list
     let mut list_camera: Camera2D = Camera2D {
         offset: Vector2 { x: 100.0, y: 75.0 },
         target: Vector2 { x: 0.0, y: 0.0 },
@@ -114,12 +127,15 @@ fn main() {
         zoom: 1.0
     };
 
+    // smoothing
     let mut scroll_smooth: f32 = 0.0;
     let mut scroll_down_limit: f32 = 0.0;
 
     let mut paused: bool = true;
+    // should it shuffle, or play in order?
     let mut shuffle: bool = false;
 
+    // current playing music
     let mut music: Option<Music> = None;
 
     while !rl.window_should_close() {
@@ -133,16 +149,19 @@ fn main() {
                 log::warn!("this could mean either your mp3 is corrupt or something happened.");
             } else {
                 log::info!("Deallocating music...");
-                unsafe {ffi::UnloadMusicStream(music.unwrap().unwrap());}
+                unsafe {ffi::UnloadMusicStream(music.unwrap().unwrap());} // without this it will memory leak
             }
             log::info!("Loading Song ID: {}, Song {}", song_id, songs.get(song_id).unwrap());
             last_song_id = song_id;
+            // get the song that is supposed to be loaded and load it
             music = Some(audio_device.new_music(songs.get(song_id).unwrap()).unwrap());
         }
 
         if let Some(m) = music.as_mut() {
+            // disable looping so we can detect when the music stops
             m.looping = false;
 
+            // if it's stopped and it's not justp paused, play it if it hasn't started already or if it has then go to next song
             if !m.is_stream_playing() && !paused {
                 if !song_played {
                     m.play_stream();
@@ -164,6 +183,7 @@ fn main() {
             m.update_stream();
             song_progress = m.get_time_played();
             song_length = m.get_time_length();
+            /* :=-- CONTROLLS --=: */
             if rl.is_key_pressed(KeyboardKey::KEY_RIGHT) {
                 if song_progress > song_length - 5.0 {
                     m.seek_stream(song_length);
@@ -179,7 +199,7 @@ fn main() {
                 }
             }
             if rl.is_key_pressed(KeyboardKey::KEY_UP) && rl.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) {
-                m.seek_stream(song_length);
+                m.seek_stream(song_length); // go to end to simulate skipping (does this so it works with shuffle)
             }
             if rl.is_key_pressed(KeyboardKey::KEY_RIGHT) && rl.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) {
                 song_id = (song_id + 1) % songs.len();
@@ -202,13 +222,14 @@ fn main() {
                 shuffle = !shuffle;
             }
         } else {
-            // music is None, handle accordingly (maybe load music first)
             log::error!("music is None! song_id: {}, last_song_id {}, Option<song name>: {:?}", song_id, last_song_id, songs.get(song_id));
             exit(-1);
         }
+        // scrolling
         scroll_smooth += rl.get_mouse_wheel_move() * 5.0;
         list_camera.offset.y += scroll_smooth;
         scroll_smooth *= 0.9;
+        // scroll limiting so you cant scroll past the list
         if list_camera.offset.y > 75.0 {
             list_camera.offset.y = 75.0;
         }
