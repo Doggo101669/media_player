@@ -67,8 +67,8 @@ fn main() {
     log::info!("Loading all songs...");
     progress = 3;
     display_loading(&mut rl, &thread, progress, max_progress);
-    // new list of song paths
-    let mut songs: Vec<String> = Vec::new();
+    // new list of song paths and display names 1. path, 2. name
+    let mut songs: Vec<(String, String)> = Vec::new();
 
     // path is root of git
     let path = Path::new("..");
@@ -83,7 +83,14 @@ fn main() {
                         log::info!("Found file: {:?}", path);
                         if path.extension().and_then(|e| e.to_str()) == Some("mp3") {
                             log::info!("File is an mp3, adding file to songs list...");
-                            songs.push(path.to_str().unwrap().to_string());
+                            let song_path_str = path.to_str().unwrap().to_string();
+                            songs.push((song_path_str.clone(), song_path_str
+                                .chars()
+                                .clone()
+                                .take(song_path_str.len() - 17)
+                                .skip(3)
+                                .collect()
+                            ));
                         }
                     } else if path.is_dir() {
                         log::info!("Found directory: {:?}", path);
@@ -158,10 +165,10 @@ fn main() {
                 log::info!("Deallocating music...");
                 unsafe {ffi::UnloadMusicStream(music.unwrap().unwrap());} // without this it will memory leak
             }
-            log::info!("Loading Song ID: {}, Song {}", song_id, songs.get(song_id).unwrap());
+            log::info!("Loading Song ID: {}, Song {}", song_id, songs.get(song_id).unwrap().0);
             last_song_id = song_id;
             // get the song that is supposed to be loaded and load it
-            music = Some(audio_device.new_music(songs.get(song_id).unwrap()).unwrap());
+            music = Some(audio_device.new_music(&songs.get(song_id).unwrap().0).unwrap());
         }
 
         if let Some(m) = music.as_mut() {
@@ -259,7 +266,7 @@ fn main() {
                     false => color_dark2,
                 };
                 c.draw_rectangle(6, y_pos, 588, 24, back_color);
-                c.draw_text(format!("{}: {}", i + 1, song).as_str(), 24, y_pos + 7, 5, color_light0);
+                c.draw_text(format!("{}: {}", i + 1, song.1).as_str(), 24, y_pos + 7, 5, color_light0);
             }
             if i == songs.len() - 1 {
                 scroll_down_limit = y_pos as f32 - 494.0;
@@ -289,8 +296,9 @@ fn main() {
             false => d.draw_texture(&unpaused_texture, x_pos, y_pos, Color::WHITE),
         }
         // info
-        d.draw_text(format!("FPS: {}", d.get_fps()).as_str(), 6, 588, 5, color_green);
-        d.draw_text(format!("SONG NAME: {}", songs.get(song_id).unwrap()).as_str(), 12, 28, 5, color_light2);
+        d.draw_text(format!("FPS: {}", d.get_fps()).as_str(), 6, 576, 5, color_green);
+        let song_name_text = songs.get(song_id).unwrap().1.as_str();
+        d.draw_text(song_name_text, 6, 588, 5, color_light2);
     }
 
     // unload resources
