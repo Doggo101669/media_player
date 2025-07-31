@@ -47,7 +47,7 @@ fn main() {
     rl.set_target_fps(240);
 
     // for display_loading()
-    let (mut progress, max_progress) = (0, 4);
+    let (mut progress, max_progress) = (0, 5);
 
     display_loading(&mut rl, &thread, progress, max_progress);
 
@@ -57,8 +57,15 @@ fn main() {
     display_loading(&mut rl, &thread, progress, max_progress);
     let mut audio_device = RaylibAudio::init_audio_device().unwrap();
 
-    log::info!("Loading all songs...");
+    // load all images and such
+    log::info!("Loading Textures...");
     progress = 2;
+    display_loading(&mut rl, &thread, progress, max_progress);
+    let paused_texture = rl.load_texture(&thread, "res/paused.png").unwrap();
+    let unpaused_texture = rl.load_texture(&thread, "res/unpaused.png").unwrap();
+
+    log::info!("Loading all songs...");
+    progress = 3;
     display_loading(&mut rl, &thread, progress, max_progress);
     // new list of song paths
     let mut songs: Vec<String> = Vec::new();
@@ -96,7 +103,7 @@ fn main() {
     }
 
     log::info!("Entering main thread...");
-    progress = 3;
+    progress = 4;
     display_loading(&mut rl, &thread, progress, max_progress);
 
     let mut song_id: usize = 0;
@@ -266,18 +273,30 @@ fn main() {
         // progress bar
         let text = format!("{}", song_progress as u32);
         let text = text.as_str();
-        d.draw_text(text, ((800 / 2) - 212) - d.get_font_default().measure_text(text, 20.0, 1.0).x as i32, 565, 20, color_light0);
+        d.draw_text(text, ((800 / 2) - 212) - d.get_font_default().measure_text(text, 20.0, 2.0).x as i32, 565, 20, color_light0);
         d.draw_text(format!("{}", song_length as u32).as_str(), (800 / 2) + 212, 565, 20, color_light0);
         d.draw_rectangle((800 / 2) - 200, 564, 400, 20, color_dark2);
         d.draw_rectangle((800 / 2) - 196, 568, ((song_progress / song_length) * 396.0) as i32, 12, color_light0);
-        // info
-        d.draw_text(format!("FPS: {}", d.get_fps()).as_str(), 12, 48, 20, color_green);
-        d.draw_text(format!("NOW PLAYING SONG ID: {}/{}", song_id + 1, songs.len()).as_str(), 12, 12, 20, color_light0);
-        d.draw_text(format!("SONG NAME: {}", songs.get(song_id).unwrap()).as_str(), 12, 28, 5, color_light2);
         let shuffle_text = match shuffle {
             true => "SHUFFLE",
             false => "ORDER",
         };
-        d.draw_text(shuffle_text, 12, 36, 5, color_light2);
+        d.draw_text(shuffle_text, ((800 / 2) + 200) - (d.get_font_default().measure_text(shuffle_text, 20.0, 2.0).x as i32), 542, 20, color_light2);
+        d.draw_text(format!("{}/{}", song_id + 1, songs.len()).as_str(), (800 / 2) - 200, 542, 20, color_light0);
+        let (x_pos, y_pos) = ((800 / 2) - 8, 542);
+        match paused {
+            true => d.draw_texture(&paused_texture, x_pos, y_pos, Color::WHITE),
+            false => d.draw_texture(&unpaused_texture, x_pos, y_pos, Color::WHITE),
+        }
+        // info
+        d.draw_text(format!("FPS: {}", d.get_fps()).as_str(), 12, 48, 20, color_green);
+        d.draw_text(format!("SONG NAME: {}", songs.get(song_id).unwrap()).as_str(), 12, 28, 5, color_light2);
     }
+
+    // unload resources
+    log::info!("Unloading Textures...");
+    unsafe {
+        ffi::UnloadTexture(paused_texture.unwrap());
+        ffi::UnloadTexture(unpaused_texture.unwrap());
+    } // without this it will memory leak
 }
