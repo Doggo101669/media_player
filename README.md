@@ -1,4 +1,5 @@
-controlls are
+
+## CONTROLS
 CTRL+Right Arrow = next
 CTRL+Left Arrow = back
 CTRL+Up Arrow = Random
